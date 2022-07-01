@@ -111,18 +111,18 @@ def train_eval_loop(data_train, data_val, data_test, model, optimizer, train_f, 
     min_val_loss = np.inf
     optimal_weights = deepcopy(model.load_state_dict)
     for epoch in range(n_epochs):
-        train_loss_x0, train_loss_x1, train_loss_kldiv, train_loss = train_f(data_train, model, optimizer, epoch)
-        val_loss_x0, val_loss_x1, val_loss_kldiv, val_loss = eval_f(data_val, model)
-        train_loss_str = f"{train_loss_x0:.6f}, {train_loss_x1:.6f}, {train_loss_kldiv:.6f}, {train_loss:.6f}"
-        val_loss_str = f"{val_loss_x0:.6f}, {val_loss_x1:.6f}, {val_loss_kldiv:.6f}, {val_loss:.6f}"
+        train_loss_reconst, train_loss_kldiv, train_loss = train_f(data_train, model, optimizer, epoch)
+        val_loss_reconst, val_loss_kldiv, val_loss = eval_f(data_val, model)
+        train_loss_str = f"{train_loss_reconst:.6f}{train_loss_kldiv:.6f}, {train_loss:.6f}"
+        val_loss_str = f"{val_loss_reconst:.6f}, {val_loss_kldiv:.6f}, {val_loss:.6f}"
         write(train_fpath, f"{timestamp()}, {epoch}, {train_loss_str}")
         write(val_fpath, f"{timestamp()}, {epoch}, {val_loss_str}")
         if val_loss < min_val_loss:
             optimal_weights = deepcopy(model.state_dict())
     torch.save(optimal_weights, os.path.join(dpath, "optimal_weights.pt"))
     model.load_state_dict(optimal_weights)
-    test_loss_x0, test_loss_x1, test_loss_kldiv, test_loss = eval_f(data_test, model)
-    test_loss_str = f"{test_loss_x0:.6f}, {test_loss_x1:.6f}, {test_loss_kldiv:.6f}, {test_loss:.6f}"
+    test_loss_reconst, test_loss_kldiv, test_loss = eval_f(data_test, model)
+    test_loss_str = f"{test_loss_reconst:.6f}, {test_loss_kldiv:.6f}, {test_loss:.6f}"
     write(test_fpath, f"{timestamp()}, {test_loss_str}")
 
 def timestamp():
