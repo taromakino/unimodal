@@ -48,7 +48,7 @@ def main(args):
     data_union = make_dataloaders((x_train_union, y_train_union), (x_val_union, y_val_union), (x_test_union, y_test_union),
         args.batch_size)
 
-    train_f = partial(train_epoch_vae, n_anneal_epochs=args.n_anneal_epochs)
+    train_f = partial(train_epoch_vae, reconst_mult=args.reconst_mult, n_anneal_epochs=args.n_anneal_epochs)
 
     model_det = SSVAE(args.latent_dim)
     model_union = SSVAE(args.latent_dim)
@@ -83,6 +83,7 @@ if __name__ == "__main__":
     parser.add_argument("--p-flip-color", type=float, default=0.5)
     parser.add_argument("--trainval-ratios", nargs="+", type=float, default=[0.8, 0.2])
     parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--reconst-mult", type=float, default=1)
     parser.add_argument("--n-epochs", type=int, default=100)
     parser.add_argument("--n-anneal-epochs", type=int, default=10)
     parser.add_argument("--batch-size", type=int, default=100)

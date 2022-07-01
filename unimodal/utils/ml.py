@@ -70,7 +70,7 @@ def elbo(x, x_reconst, mu, logvar):
     loss_reconst = F.binary_cross_entropy_with_logits(x_reconst, x)
     return loss_reconst, posterior_kldiv(mu, logvar)
 
-def train_epoch_vae(train_data, model, optimizer, epoch, n_anneal_epochs):
+def train_epoch_vae(train_data, model, optimizer, epoch, reconst_mult, n_anneal_epochs):
     n_batches = len(train_data)
     device = make_device()
     model.train()
@@ -81,7 +81,7 @@ def train_epoch_vae(train_data, model, optimizer, epoch, n_anneal_epochs):
         x_reconst, mu, logvar = model(x_batch, y_batch)
         loss_batch_x, loss_batch_kldiv = elbo(x_batch, x_reconst, mu, logvar)
         anneal_mult = (batch_idx + epoch * n_batches) / (n_anneal_epochs * n_batches) if epoch < n_anneal_epochs else 1
-        loss_batch = loss_batch_x + anneal_mult * loss_batch_kldiv
+        loss_batch = reconst_mult * loss_batch_x + anneal_mult * loss_batch_kldiv
         loss_batch.backward()
         loss_reconst_epoch.append(loss_batch_x.item())
         loss_kldiv_epoch.append(loss_batch_kldiv.item())
