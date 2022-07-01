@@ -25,5 +25,5 @@ def make_data(is_trainval, p_flip_color):
         imgs.append(color_image(img, u_elem))
         y.append(y_elem)
     imgs = np.array(imgs, dtype="float32")
-    imgs = imgs.transpose((0, 3, 1, 2))
+    imgs = imgs.reshape((len(imgs), -1))
     return imgs, np.array(y, dtype="float32")

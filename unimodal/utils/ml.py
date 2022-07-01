@@ -66,7 +66,7 @@ def eval_epoch_vanilla(eval_data, model):
 def posterior_kldiv(mu, logvar):
     return torch.mean(-0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
 
-def elbo_loss(x, x_reconst, mu, logvar):
+def elbo(x, x_reconst, mu, logvar):
     loss_reconst = F.binary_cross_entropy_with_logits(x_reconst, x)
     return loss_reconst, posterior_kldiv(mu, logvar)
 
@@ -78,8 +78,8 @@ def train_epoch_vae(train_data, model, optimizer, epoch, n_anneal_epochs):
     for batch_idx, (x_batch, y_batch) in enumerate(train_data):
         x_batch, y_batch = x_batch.to(device), y_batch.to(device)
         optimizer.zero_grad()
-        x0_reconst, mu, logvar = model(x_batch, y_batch)
-        loss_batch_x, loss_batch_kldiv = elbo_loss(x_batch, x0_reconst, mu, logvar)
+        x_reconst, mu, logvar = model(x_batch, y_batch)
+        loss_batch_x, loss_batch_kldiv = elbo(x_batch, x_reconst, mu, logvar)
         anneal_mult = (batch_idx + epoch * n_batches) / (n_anneal_epochs * n_batches) if epoch < n_anneal_epochs else 1
         loss_batch = loss_batch_x + anneal_mult * loss_batch_kldiv
         loss_batch.backward()
@@ -97,7 +97,7 @@ def eval_epoch_vae(eval_data, model):
         for x_batch, y_batch in eval_data:
             x_batch, y_batch = x_batch.to(device), y_batch.to(device)
             x_reconst, mu, logvar = model(x_batch, y_batch)
-            loss_reconst_batch, loss_kldiv_batch = elbo_loss(x_batch, x_reconst, mu, logvar)
+            loss_reconst_batch, loss_kldiv_batch = elbo(x_batch, x_reconst, mu, logvar)
             loss_batch = loss_reconst_batch + loss_kldiv_batch
             loss_reconst_epoch.append(loss_reconst_batch.item())
             loss_kldiv_epoch.append(loss_kldiv_batch.item())
