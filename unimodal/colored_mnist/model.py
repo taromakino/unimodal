@@ -1,6 +1,6 @@
+import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from torch.nn import functional as F
 
 class SSVAE(nn.Module):
     def __init__(self, latent_dim):
@@ -11,11 +11,11 @@ class SSVAE(nn.Module):
 
     def sample_z(self, mu, logvar):
         if self.training:
-            std = logvar.mul(0.5).exp_()
-            eps = Variable(std.data.new(std.size()).normal_())
-            return eps.mul(std).add_(mu)
+            sd = torch.exp(logvar / 2) # Same as sqrt(exp(logvar))
+            eps = torch.randn_like(sd)
+            return mu + eps * sd
         else:
-          return mu
+            return mu
 
     def forward(self, x, y):
         mu, logvar = self.encoder(x)
@@ -54,4 +54,4 @@ class Decoder(nn.Module):
 
 class Swish(nn.Module):
     def forward(self, x):
-        return x * F.sigmoid(x)
+        return x * torch.sigmoid(x)
