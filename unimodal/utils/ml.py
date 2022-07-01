@@ -64,10 +64,11 @@ def eval_epoch_vanilla(eval_data, model):
     return np.mean(loss_epoch)
 
 def posterior_kldiv(mu, logvar):
-    return torch.mean(-0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
+    return -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1)
 
 def elbo(x, x_reconst, mu, logvar):
-    loss_reconst = F.binary_cross_entropy_with_logits(x_reconst, x)
+    loss_reconst = F.binary_cross_entropy_with_logits(x_reconst, x, reduction="none")
+    loss_reconst = loss_reconst.sum(dim=1)
     return loss_reconst, posterior_kldiv(mu, logvar)
 
 def train_epoch_vae(train_data, model, optimizer, epoch, reconst_mult, n_anneal_epochs):
@@ -79,12 +80,14 @@ def train_epoch_vae(train_data, model, optimizer, epoch, reconst_mult, n_anneal_
         x_batch, y_batch = x_batch.to(device), y_batch.to(device)
         optimizer.zero_grad()
         x_reconst, mu, logvar = model(x_batch, y_batch)
-        loss_batch_x, loss_batch_kldiv = elbo(x_batch, x_reconst, mu, logvar)
+        loss_reconst_batch, loss_kldiv_batch = elbo(x_batch, x_reconst, mu, logvar)
+        loss_reconst_epoch.append(loss_reconst_batch.mean().item())
+        loss_kldiv_epoch.append(loss_kldiv_batch.mean().item())
         anneal_mult = (batch_idx + epoch * n_batches) / (n_anneal_epochs * n_batches) if epoch < n_anneal_epochs else 1
-        loss_batch = reconst_mult * loss_batch_x + anneal_mult * loss_batch_kldiv
+        loss_batch = (reconst_mult * loss_reconst_batch + anneal_mult * loss_kldiv_batch).mean()
         loss_batch.backward()
-        loss_reconst_epoch.append(loss_batch_x.item())
-        loss_kldiv_epoch.append(loss_batch_kldiv.item())
+        loss_reconst_epoch.append(loss_reconst_batch.mean().item())
+        loss_kldiv_epoch.append(loss_kldiv_batch.mean().item())
         loss_epoch.append(loss_batch.item())
         optimizer.step()
     return np.mean(loss_reconst_epoch), np.mean(loss_kldiv_epoch), np.mean(loss_epoch)
@@ -98,9 +101,9 @@ def eval_epoch_vae(eval_data, model):
             x_batch, y_batch = x_batch.to(device), y_batch.to(device)
             x_reconst, mu, logvar = model(x_batch, y_batch)
             loss_reconst_batch, loss_kldiv_batch = elbo(x_batch, x_reconst, mu, logvar)
-            loss_batch = loss_reconst_batch + loss_kldiv_batch
-            loss_reconst_epoch.append(loss_reconst_batch.item())
-            loss_kldiv_epoch.append(loss_kldiv_batch.item())
+            loss_batch = (loss_reconst_batch + loss_kldiv_batch).mean()
+            loss_reconst_epoch.append(loss_reconst_batch.mean().item())
+            loss_kldiv_epoch.append(loss_kldiv_batch.mean().item())
             loss_epoch.append(loss_batch.item())
     return np.mean(loss_reconst_epoch), np.mean(loss_kldiv_epoch), np.mean(loss_epoch)
 
